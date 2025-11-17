@@ -2,23 +2,22 @@
 
 import { useState } from "react";
 import axios from "axios";
+import { useRouter } from "next/navigation";
 
-// Configuración segura de axios
 const api = axios.create({
   baseURL: "http://localhost:8000",
   withCredentials: true,
-  withXSRFToken: true, // Envía automáticamente el XSRF token
+  withXSRFToken: true,
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",
   },
 });
 
-export default function RegisterPage() {
-  const [name, setName] = useState("");
+export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [password_confirmation, setPasswordConfirmation] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
 
@@ -28,39 +27,40 @@ export default function RegisterPage() {
     setErrors({});
 
     try {
-      // 1. Obtener CSRF cookie
+      // 1. Hacemos el "apretón de manos" con Sanctum
       await api.get("/sanctum/csrf-cookie");
 
-      // 2. Registrar usuario
-      await api.post("/api/register", {
-        name,
+      // 2. Intentamos el login
+      await api.post("/api/login", {
         email,
         password,
-        password_confirmation,
       });
 
-      alert("¡Registro exitoso!");
-
-      // Limpiar formulario
-      setName("");
-      setEmail("");
-      setPassword("");
-      setPasswordConfirmation("");
+      // ¡Éxito! Redirigimos al usuario al dashboard
+      router.push("/dashboard");
     } catch (error) {
+      // Si algo sale mal, guardamos el error para mostrarlo
+      console.error("❌ Error en login:", error); // Dejamos este para depurar
+
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 422) {
-          // Errores de validación
+          // Errores de validación (ej. email no válido)
           setErrors(error.response.data.errors || {});
+        } else if (error.response?.status === 401) {
+          // Error 401 es "No autorizado" - credenciales incorrectas
+          setErrors({ email: ["Las credenciales son incorrectas"] });
         } else if (error.response?.status === 429) {
-          // Rate limit excedido
-          alert("Demasiados intentos. Por favor espera un momento.");
+          // Demasiados intentos
+          setErrors({ email: ["Demasiados intentos. Espera un momento."] });
         } else {
-          alert(
-            `Error: ${error.response?.data?.message || "Error desconocido"}`
-          );
+          // Otro error del servidor
+          setErrors({
+            email: [error.response?.data?.message || "Error al iniciar sesión"],
+          });
         }
       } else {
-        alert("Error de conexión con el servidor.");
+        // Error de red
+        setErrors({ email: ["Error de conexión con el servidor"] });
       }
     } finally {
       setLoading(false);
@@ -74,29 +74,9 @@ export default function RegisterPage() {
         className="p-8 bg-gray-800 rounded-lg shadow-lg w-96"
       >
         <h2 className="text-2xl font-bold mb-6 text-white text-center">
-          Crear Cuenta
+          Iniciar Sesión
         </h2>
 
-        {/* Campo de Nombre */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-2" htmlFor="name">
-            Nombre
-          </label>
-          <input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-2 rounded bg-gray-700 text-white"
-            disabled={loading}
-            required
-          />
-          {errors.name && (
-            <p className="text-red-500 text-sm mt-1">{errors.name[0]}</p>
-          )}
-        </div>
-
-        {/* Campo de Email */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-2" htmlFor="email">
             Email
@@ -115,8 +95,7 @@ export default function RegisterPage() {
           )}
         </div>
 
-        {/* Campo de Password */}
-        <div className="mb-4">
+        <div className="mb-6">
           <label className="block text-sm font-medium mb-2" htmlFor="password">
             Contraseña
           </label>
@@ -128,41 +107,28 @@ export default function RegisterPage() {
             className="w-full p-2 rounded bg-gray-700 text-white"
             disabled={loading}
             required
-            minLength={8}
           />
           {errors.password && (
             <p className="text-red-500 text-sm mt-1">{errors.password[0]}</p>
           )}
         </div>
 
-        {/* Campo de Confirmación de Password */}
-        <div className="mb-6">
-          <label
-            className="block text-sm font-medium mb-2"
-            htmlFor="password_confirmation"
-          >
-            Confirmar Contraseña
-          </label>
-          <input
-            id="password_confirmation"
-            type="password"
-            value={password_confirmation}
-            onChange={(e) => setPasswordConfirmation(e.target.value)}
-            className="w-full p-2 rounded bg-gray-700 text-white"
-            disabled={loading}
-            required
-            minLength={8}
-          />
-        </div>
-
-        {/* Botón de Registro */}
         <button
           type="submit"
           disabled={loading}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? "Registrando..." : "Registrarse"}
+          {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
         </button>
+
+        <div className="mt-4 text-center">
+          <a
+            href="/register"
+            className="text-blue-400 hover:text-blue-300 text-sm"
+          >
+            ¿No tienes cuenta? Regístrate
+          </a>
+        </div>
       </form>
     </div>
   );
