@@ -1,18 +1,8 @@
 "use client";
-
 import { useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-
-const api = axios.create({
-  baseURL: "http://localhost:8000",
-  withCredentials: true,
-  withXSRFToken: true,
-  headers: {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  },
-});
+import api from "@/lib/axios";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -40,7 +30,7 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (error) {
       // Si algo sale mal, guardamos el error para mostrarlo
-      console.error("❌ Error en login:", error); // Dejamos este para depurar
+      console.error("❌ Error en login:", error); 
 
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 422) {

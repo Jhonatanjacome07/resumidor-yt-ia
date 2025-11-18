@@ -2,17 +2,8 @@
 
 import { useState } from "react";
 import axios from "axios";
-
-// Configuración segura de axios
-const api = axios.create({
-  baseURL: "http://localhost:8000",
-  withCredentials: true,
-  withXSRFToken: true, // Envía automáticamente el XSRF token
-  headers: {
-    Accept: "application/json",
-    "Content-Type": "application/json",
-  },
-});
+import { useRouter } from "next/navigation";
+import api from "@/lib/axios";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
