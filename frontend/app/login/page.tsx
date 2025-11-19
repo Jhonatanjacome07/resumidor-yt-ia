@@ -3,6 +3,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import api from "@/lib/axios";
+import { useUserStore } from "@/stores/useUserStore";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const setUser = useUserStore((state) => state.login);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -17,20 +19,24 @@ export default function LoginPage() {
     setErrors({});
 
     try {
-      // 1. Hacemos el "apretón de manos" con Sanctum
+      // 1. Cookie CSRF
       await api.get("/sanctum/csrf-cookie");
 
-      // 2. Intentamos el login
+      // 2. Login (Autentica la cookie)
       await api.post("/api/login", {
         email,
         password,
       });
 
-      // ¡Éxito! Redirigimos al usuario al dashboard
+      // 3. Obtener datos del usuario
+      const userResponse = await api.get("/api/user");
+
+      // 4. Zustand
+      setUser(userResponse.data);
       router.push("/dashboard");
     } catch (error) {
-      // Si algo sale mal, guardamos el error para mostrarlo
-      console.error("❌ Error en login:", error); 
+      // debug error
+      console.error("❌ Error en login:", error);
 
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 422) {
@@ -43,7 +49,6 @@ export default function LoginPage() {
           // Demasiados intentos
           setErrors({ email: ["Demasiados intentos. Espera un momento."] });
         } else {
-          // Otro error del servidor
           setErrors({
             email: [error.response?.data?.message || "Error al iniciar sesión"],
           });
