@@ -1,0 +1,573 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Procesar respuesta del AI Agent y construir respuesta final\nconst aiResponse = $input.item.json;\n\n// 1. OBTENER DATOS DE NODOS ANTERIORES ESPECÍFICOS\n\n// Obtener videoId del nodo \"Validar URL\"\nlet videoId = 'unknown';\ntry {\n  videoId = $('Validar URL').item.json.videoId || 'unknown';\n} catch (e) {\n  console.log('No se pudo obtener videoId de Validar URL');\n}\n\n// Obtener metadatos del nodo \"Obtener Metadatos\"\nlet metadatos = {\n  title: 'Sin título',\n  author_name: 'Desconocido',\n  thumbnail_url: ''\n};\ntry {\n  metadatos = $('Obtener Metadatos').item.json || metadatos;\n} catch (e) {\n  console.log('No se pudo obtener metadatos');\n}\n\n// Obtener URL original del Webhook\nlet videoUrl = '';\ntry {\n  videoUrl = $('Webhook Receive').item.json.body.videoUrl || \n             $('Webhook Receive').item.json.body.url || '';\n} catch (e) {\n  console.log('No se pudo obtener videoUrl del Webhook');\n}\n\n// Obtener userId y requestId del nodo \"Verificar API Key\"\nlet userId = 1;\nlet requestId = 'unknown';\ntry {\n  const authData = $('Verificar API Key').item.json;\n  userId = authData.userId || 1;\n  requestId = authData.requestId || 'unknown';\n} catch (e) {\n  console.log('No se pudo obtener datos de autenticación');\n}\n\n// Obtener datos de transcripción del nodo \"Preparar para Análisis\"\nlet transcriptData = {\n  length: 0,\n  hasTranscript: false\n};\ntry {\n  const prepData = $('Preparar para Análisis').item.json;\n  transcriptData.length = prepData.transcriptLength || 0;\n  transcriptData.hasTranscript = prepData.hasTranscript || false;\n} catch (e) {\n  console.log('No se pudo obtener datos de transcripción');\n}\n\n// Construir objeto videoData consolidado\nconst videoData = {\n  videoId: videoId,\n  videoTitle: metadatos.title || 'Sin título',\n  videoAuthor: metadatos.author_name || 'Desconocido',\n  videoThumbnail: metadatos.thumbnail_url || '',\n  videoUrl: videoUrl,\n  userId: userId,\n  requestId: requestId,\n  transcriptLength: transcriptData.length,\n  hasTranscript: transcriptData.hasTranscript\n};\n// 2. PROCESAR RESPUESTA DE LA IA (con doble parsing)\n\nlet analysisData = {\n  summary: '',\n  fullAnalysis: ''\n};\n\ntry {\n  let parsedResponse = aiResponse;\n  \n  // PASO 1: Si es string, parsear primera vez\n  if (typeof aiResponse === 'string') {\n    try {\n      let cleanJson = aiResponse\n        .replace(/```json\\n?/g, '')\n        .replace(/```\\n?/g, '')\n        .trim();\n      parsedResponse = JSON.parse(cleanJson);\n    } catch (e) {\n      analysisData.summary = aiResponse;\n      analysisData.fullAnalysis = aiResponse;\n      parsedResponse = null;\n    }\n  }\n  \n  if (parsedResponse) {\n    let summaryData = parsedResponse.summary || parsedResponse.output || parsedResponse.text;\n    let fullAnalysisData = parsedResponse.fullAnalysis;\n    \n    // PASO 2: Si summary parece JSON anidado, parsearlo\n    if (typeof summaryData === 'string' && summaryData.trim().startsWith('{')) {\n      try {\n        const nestedJson = JSON.parse(summaryData);\n        if (nestedJson.summary) summaryData = nestedJson.summary;\n        if (nestedJson.fullAnalysis) fullAnalysisData = nestedJson.fullAnalysis;\n        \n        // Actualizar metadatos si vienen en nested JSON\n        if (nestedJson.videoMetadata) {\n          videoData.videoTitle = nestedJson.videoMetadata.title || videoData.videoTitle;\n          videoData.videoAuthor = nestedJson.videoMetadata.author || videoData.videoAuthor;\n          videoData.videoUrl = nestedJson.videoMetadata.url || videoData.videoUrl;\n          videoData.videoThumbnail = nestedJson.videoMetadata.thumbnail || videoData.videoThumbnail;\n        }\n      } catch (e) {\n        console.log('No se pudo parsear JSON anidado');\n      }\n    }\n    \n    analysisData.summary = summaryData || '';\n    analysisData.fullAnalysis = fullAnalysisData || summaryData || '';\n    \n    // Metadatos del nivel superior\n    if (parsedResponse.videoMetadata) {\n      videoData.videoTitle = parsedResponse.videoMetadata.title || videoData.videoTitle;\n      videoData.videoAuthor = parsedResponse.videoMetadata.author || videoData.videoAuthor;\n      videoData.videoUrl = parsedResponse.videoMetadata.url || videoData.videoUrl;\n      videoData.videoThumbnail = parsedResponse.videoMetadata.thumbnail || videoData.videoThumbnail;\n    }\n  }\n  \n  if (!analysisData.summary || analysisData.summary.length < 10) {\n    analysisData.summary = `Análisis del video: ${videoData.videoTitle}`;\n    analysisData.fullAnalysis = analysisData.summary;\n  }\n  \n} catch (error) {\n  console.error('Error procesando IA:', error);\n  analysisData.summary = `Análisis del video: ${videoData.videoTitle}`;\n  analysisData.fullAnalysis = analysisData.summary;\n}\n\n// 3. CONSTRUIR RESPUESTA FINAL\n\nconst finalResponse = {\n  success: true,\n  userId: videoData.userId,\n  requestId: videoData.requestId,\n  analysis: {\n    summary: analysisData.summary,\n    fullAnalysis: analysisData.fullAnalysis\n  },\n  video: {\n    id: videoData.videoId,  \n    title: videoData.videoTitle,\n    author: videoData.videoAuthor,\n    thumbnail: videoData.videoThumbnail,\n    url: videoData.videoUrl\n  },\n  transcript: {\n    length: videoData.transcriptLength,\n    hasTranscript: videoData.hasTranscript\n  },\n  timestamp: new Date().toISOString()\n};\n\nconsole.log('=== VIDEO ID ===', videoData.videoId);\nconsole.log('=== RESPUESTA FINAL ===');\nconsole.log(JSON.stringify(finalResponse, null, 2));\n\nreturn finalResponse;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2768,
+        180
+      ],
+      "id": "49773d46-bba5-45a4-ac8d-25b978607579",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -3048,
+        128
+      ],
+      "id": "d41eb075-eb3d-4655-a0b2-98835630a6eb",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "JHogtA0gP9r2s4tu",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un analizador experto de videos de YouTube con amplio conocimiento musical y cultural. Tu tarea es proporcionar un análisis ÚTIL y CONCRETO sobre el contenido del video.\n\n**IMPORTANTE: Debes responder ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin markdown, sin backticks. Solo JSON puro.**\n\n## Datos del video:\n\n**Título:** {{ $('Obtener Metadatos').item.json.title }}\n**Autor:** {{ $('Obtener Metadatos').item.json.author_name }}\n**URL:** {{ $('Webhook Receive').item.json.body.videoUrl }}\n**Thumbnail:** {{ $('Obtener Metadatos').item.json.thumbnail_url }}\n\n## INSTRUCCIONES CRÍTICAS DE ANÁLISIS:\n\nTu análisis debe responder estas preguntas concretas:\n\n### Para videos MUSICALES:\n1. **¿De qué trata la canción?** - Tema lírico, mensaje, historia que cuenta\n2. **¿Qué emociones transmite?** - Sentimientos principales de la letra\n3. **¿Cuál es el contexto?** - Álbum al que pertenece, año de lanzamiento, significado para la banda\n4. **¿Qué estilo musical tiene?** - Género, influencias, características sonoras\n\n### Para videos INFORMATIVOS/TUTORIALES:\n1. **¿Qué se enseña o explica?** - Tema principal\n2. **¿Cuáles son los puntos clave?** - Información más importante\n3. **¿Para quién es útil?** - Audiencia objetivo\n\n### Para videos de ENTRETENIMIENTO:\n1. **¿De qué trata?** - Sinopsis o resumen del contenido\n2. **¿Quiénes participan?** - Personas o personajes principales\n3. **¿Qué hace interesante al video?** - Elementos destacados\n\n## REGLAS ESTRICTAS:\n\n1. **NUNCA** describas aspectos técnicos de YouTube (miniaturas, embeds, playlists, algoritmos)\n2. **NUNCA** hables sobre \"la plataforma\", \"el formato\", \"la distribución\"\n3. **NUNCA** uses frases como \"probablemente\", \"posiblemente\", \"sugiere que\"\n4. **ENFÓCATE** en el CONTENIDO: de qué trata, qué mensaje tiene, qué cuenta\n5. **USA** tu conocimiento sobre artistas, canciones, temas para dar información real\n6. **ESCRIBE** como si le explicaras a alguien qué va a ver/escuchar\n\n## FORMATO DE RESPUESTA:\n\nEl \"summary\" debe empezar directamente con el contenido, ejemplo:\n- BIEN: \"El video presenta la canción 'Solo a Terceros' que habla sobre el dolor de amar a alguien que no corresponde...\"\n- MAL: \"El video es un lanzamiento oficial publicado en YouTube que forma parte de...\"\n\n{\n  \"summary\": \"Descripción directa del CONTENIDO del video. ¿De qué trata? ¿Qué mensaje tiene? ¿Qué historia cuenta? (200-400 palabras enfocadas en el contenido, NO en aspectos técnicos de YouTube)\",\n  \"fullAnalysis\": \"Análisis profundo: contexto del artista/creador, significado de la obra, estilo, por qué es relevante, qué aporta al espectador (300-500 palabras)\",\n  \"videoMetadata\": {\n    \"title\": \"{{ $('Obtener Metadatos').item.json.title }}\",\n    \"author\": \"{{ $('Obtener Metadatos').item.json.author_name }}\",\n    \"url\": \"{{ $('Webhook Receive').item.json.body.videoUrl }}\",\n    \"thumbnail\": \"{{ $('Obtener Metadatos').item.json.thumbnail_url }}\"\n  }\n}\n\n**CRÍTICO:** Tu respuesta debe ser SOLO el objeto JSON anterior, completado con tu análisis. No agregues ningún texto antes o después del JSON. No uses backticks de markdown. No escapes las comillas internas del JSON. Responde directamente con el objeto JSON como si fuera código JavaScript ejecutable.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        -3120,
+        -96
+      ],
+      "id": "2d899e94-8ec7-445c-9904-d2d9b982bd1d",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": {{ $json.success }},\n  \"userId\": {{ JSON.stringify($json.userId) }},\n  \"requestId\": {{ JSON.stringify($json.requestId) }},\n  \"analysis\": {{ JSON.stringify($json.analysis) }},\n  \"video\": {{ JSON.stringify($json.video) }},\n  \"transcript\": {{ JSON.stringify($json.transcript) }},\n  \"timestamp\": {{ JSON.stringify($json.timestamp) }}\n}",
+        "options": {}
+      },
+      "id": "5b7d00a6-4939-4046-9366-184c4bab1b63",
+      "name": "Responder al Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        -2544,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge: combinar transcripciones de ambas rutas\nconst data = $input.item.json;\n\n// Limitar transcripción a 10000 caracteres para no sobrepasar límites de Gemini\nconst maxLength = 10000;\nlet finalTranscript = data.transcriptionText || '';\n\nif (finalTranscript.length > maxLength) {\n  finalTranscript = finalTranscript.substring(0, maxLength) + '... [transcripción truncada]';\n}\n\nreturn {\n  json: {\n    videoUrl: data.videoUrl,\n    videoId: data.videoId,\n    userId: data.userId,\n    requestId: data.requestId,\n    videoTitle: data.videoTitle,\n    videoAuthor: data.videoAuthor,\n    videoThumbnail: data.videoThumbnail,\n    transcriptionText: finalTranscript,\n    hasTranscript: finalTranscript.length > 100,\n    transcriptLength: finalTranscript.length,\n    readyForAnalysis: true\n  }\n};"
+      },
+      "id": "d012972b-a9b7-469f-bbab-f34ee2da29a9",
+      "name": "Preparar para Análisis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3344,
+        8
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsear XML de subtítulos a texto plano\nconst xml = $input.item.json.data || '';\nconst previousData = $input.item.json;\n\nlet transcriptionText = '';\n\ntry {\n  // Extraer todo el texto de las etiquetas <text>\n  const textMatches = xml.match(/<text[^>]*>([^<]*)<\\/text>/g);\n  \n  if (textMatches) {\n    transcriptionText = textMatches\n      .map(match => {\n        // Extraer el contenido de la etiqueta\n        const text = match.replace(/<\\/?text[^>]*>/g, '');\n        // Decodificar entidades HTML\n        return text\n          .replace(/&amp;/g, '&')\n          .replace(/&lt;/g, '<')\n          .replace(/&gt;/g, '>')\n          .replace(/&quot;/g, '\"')\n          .replace(/&#39;/g, \"'\")\n          .replace(/&nbsp;/g, ' ');\n      })\n      .join(' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n  }\n} catch (error) {\n  console.log('Error parsing XML:', error.message);\n}\n\nreturn {\n  json: {\n    ...previousData,\n    transcriptionText: transcriptionText,\n    hasTranscript: transcriptionText.length > 0,\n    transcriptLength: transcriptionText.length,\n    transcriptSource: 'youtube_captions'\n  }\n};"
+      },
+      "id": "dac0f729-10ca-49cc-aa5c-200d6007070f",
+      "name": "Parsear XML a Texto",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3568,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.captionUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "1ffc48c1-aae8-4a04-9f6f-d0a4eb191980",
+      "name": "Descargar Subtítulos XML",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3792,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.needsDownload }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "871a9af5-4f4d-4fba-8818-f33e293f938a",
+      "name": "¿Descargar Subtítulos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -4016,
+        56
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer captionTracks del HTML\nconst html = $input.item.json.data || '';\nconst previousData = $input.item.json;\n\nlet transcriptionText = '';\nlet hasTranscript = false;\n\ntry {\n  // Buscar captionTracks en el HTML\n  const captionTracksMatch = html.match(/\"captionTracks\":\\s*\\[(.*?)\\]/s);\n  \n  if (captionTracksMatch) {\n    const captionTracksStr = '[' + captionTracksMatch[1] + ']';\n    const captionTracks = JSON.parse(captionTracksStr);\n    \n    // Buscar transcripción en español o inglés\n    const track = captionTracks.find(t => t.languageCode === 'es' || t.languageCode === 'en') || captionTracks[0];\n    \n    if (track && track.baseUrl) {\n      // Guardar la URL para descargarla en el siguiente nodo\n      return {\n        json: {\n          ...previousData,\n          captionUrl: track.baseUrl,\n          captionLanguage: track.languageCode,\n          needsDownload: true\n        }\n      };\n    }\n  }\n} catch (error) {\n  console.log('Error extracting captions:', error.message);\n}\n\n// Si no se encontró, continuar sin transcripción\nreturn {\n  json: {\n    ...previousData,\n    transcriptionText: '',\n    hasTranscript: false,\n    needsDownload: false,\n    fallbackMethod: 'no_transcript_available'\n  }\n};"
+      },
+      "id": "7bf1b1e0-2567-46cb-a802-2674eeeb46d7",
+      "name": "Extraer URL de Subtítulos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4240,
+        56
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.youtube.com/watch?v={{ $json.videoId }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "173b7049-b3cc-4e23-a1a6-70f4ef8e8062",
+      "name": "Obtener HTML (Método Alternativo)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -4464,
+        56
+      ],
+      "notes": "Método alternativo: extraer subtítulos del HTML de la página"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.hasTranscript }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "953787a5-9bf7-4aae-97e7-0eaa9c04fbb6",
+      "name": "¿Hay Transcripción?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -4688,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parsear la transcripción de YouTube\nconst response = $input.item.json;\nconst previousData = $input.item.json;\n\nlet transcriptionText = '';\nlet hasTranscript = false;\n\n// Intentar extraer la transcripción del response\ntry {\n  if (response.actions && response.actions[0] && response.actions[0].updateEngagementPanelAction) {\n    const content = response.actions[0].updateEngagementPanelAction.content;\n    const transcriptRenderer = content.transcriptRenderer || content.transcriptSearchPanelRenderer;\n    \n    if (transcriptRenderer && transcriptRenderer.body) {\n      const segments = transcriptRenderer.body.transcriptBodyRenderer.cueGroups;\n      \n      transcriptionText = segments.map(segment => {\n        return segment.transcriptCueGroupRenderer.cues[0].transcriptCueRenderer.cue.simpleText;\n      }).join(' ');\n      \n      hasTranscript = true;\n    }\n  }\n} catch (error) {\n  console.log('Error parsing transcript:', error.message);\n}\n\n// Si no se pudo obtener, marcar para método alternativo\nif (!hasTranscript || !transcriptionText) {\n  transcriptionText = '';\n  hasTranscript = false;\n}\n\nreturn {\n  json: {\n    ...previousData,\n    transcriptionText: transcriptionText,\n    hasTranscript: hasTranscript,\n    transcriptLength: transcriptionText.length\n  }\n};"
+      },
+      "id": "4883a19d-d08e-416d-a38c-cf0ce98fac9a",
+      "name": "Parsear Transcripción",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4912,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.youtube.com/youtubei/v1/get_transcript",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"context\": {\n    \"client\": {\n      \"clientName\": \"WEB\",\n      \"clientVersion\": \"2.20230101.00.00\"\n    }\n  },\n  \"params\": \"{{ $json.videoId }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "2e0e16f6-d994-4804-9ec0-1a913adec684",
+      "name": "Obtener Transcripción (API YouTube)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -5136,
+        -40
+      ],
+      "notes": "Intenta obtener la transcripción directamente de la API interna de YouTube"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer metadata del video\nconst videoInfo = $input.item.json;\nconst previousData = $input.item.json;\n\nreturn {\n  json: {\n    videoUrl: previousData.videoUrl,\n    videoId: previousData.videoId,\n    userId: previousData.userId,\n    requestId: previousData.requestId,\n    videoTitle: videoInfo.title || 'Sin título',\n    videoAuthor: videoInfo.author_name || 'Autor desconocido',\n    videoThumbnail: videoInfo.thumbnail_url || '',\n    metadataStatus: 'success'\n  }\n};"
+      },
+      "id": "5341ad7f-2cf7-4f75-9392-e84a307e1c79",
+      "name": "Extraer Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5360,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.youtube.com/oembed?url={{ $json.videoUrl }}&format=json",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "63de5e13-822a-4ed7-ae07-7dfdd7ce475f",
+      "name": "Obtener Metadatos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -5584,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extraer y validar datos del webhook\nconst videoUrl = $input.item.json.videoUrl;\nconst userId = $input.item.json.userId || 'anonymous';\nconst requestId = $input.item.json.requestId || Date.now().toString();\n\n// Validar URL de YouTube\nfunction extractVideoId(url) {\n  const patterns = [\n    /(?:youtube\\.com\\/watch\\?v=|youtu\\.be\\/|youtube\\.com\\/embed\\/)([^&\\n?#]+)/,\n    /youtube\\.com\\/v\\/([^&\\n?#]+)/\n  ];\n  \n  for (const pattern of patterns) {\n    const match = url.match(pattern);\n    if (match) {\n      return match[1];\n    }\n  }\n  return null;\n}\n\nconst videoId = extractVideoId(videoUrl);\n\nif (!videoId) {\n  return {\n    json: {\n      error: 'URL de YouTube inválida',\n      requestId: requestId,\n      success: false,\n      statusCode: 400\n    }\n  };\n}\n\nreturn {\n  json: {\n    videoUrl: videoUrl,\n    videoId: videoId,\n    userId: userId,\n    requestId: requestId,\n    success: true,\n    statusCode: 200\n  }\n};"
+      },
+      "id": "277de2cb-689e-49cc-8391-db95f88ff772",
+      "name": "Validar URL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5808,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retornar error 401\nconst data = $input.item.json;\nreturn {\n  json: {\n    success: false,\n    error: data.error || 'Unauthorized',\n    message: data.message || 'No autorizado',\n    statusCode: 401\n  }\n};"
+      },
+      "id": "0b6806a4-facb-4922-9896-083ba9df18a6",
+      "name": "Error 401",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3056,
+        324
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.authenticated }}",
+              "operation": "contains",
+              "value2": "true"
+            }
+          ]
+        }
+      },
+      "id": "82b9775b-2d15-4d51-ba36-f3629c1c6732",
+      "name": "¿Autenticado?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -6032,
+        108
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// VALIDAR CLAVE SECRETA DE API\nconst headers = $input.item.json.headers;\n\n// Buscar el API Key en diferentes formatos de header\nconst apiKey = headers['x-api-key'] || \n               headers['X-API-KEY'] || \n               headers['X-Api-Key'] ||\n               headers['n8n_api_key'] ||\n               headers['N8N_API_KEY'];\n\nconst expectedApiKey = 'tu_super_clave_secreta_2025';\n\n// Si no hay API Key o es incorrecta, retornar error\nif (!apiKey || apiKey !== expectedApiKey) {\n  return {\n    json: {\n      success: false,\n      error: 'Unauthorized',\n      message: `API Key inválida o no proporcionada. Recibido: ${apiKey ? 'Key incorrecta' : 'Sin key'}`,\n      statusCode: 401,\n      isAuthError: true\n    }\n  };\n}\n\n// Si la autenticación es correcta, extraer y normalizar datos\nconst body = $input.item.json.body;\n\n// Normalizar el nombre del campo: puede venir como 'url' o 'videoUrl'\nconst videoUrl = body.videoUrl || body.url;\nconst userId = body.userId || body.user_id || 'anonymous';\nconst requestId = body.requestId || body.request_id || Date.now().toString();\n\nreturn {\n  json: {\n    videoUrl: videoUrl,\n    userId: userId,\n    requestId: requestId,\n    authenticated: true,\n    statusCode: 200\n  }\n};"
+      },
+      "id": "aceadbe0-fdc6-4d09-8415-c2f4f130f8e5",
+      "name": "Verificar API Key",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -6256,
+        108
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aaaaa",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "c5795ea9-e366-4dcf-995c-51789a8d9674",
+      "name": "Webhook Receive",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -6480,
+        108
+      ],
+      "webhookId": "resumidor-yt-webhook"
+    }
+  ],
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Responder al Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar para Análisis": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear XML a Texto": {
+      "main": [
+        [
+          {
+            "node": "Preparar para Análisis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar Subtítulos XML": {
+      "main": [
+        [
+          {
+            "node": "Parsear XML a Texto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Descargar Subtítulos?": {
+      "main": [
+        [
+          {
+            "node": "Descargar Subtítulos XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Preparar para Análisis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer URL de Subtítulos": {
+      "main": [
+        [
+          {
+            "node": "¿Descargar Subtítulos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener HTML (Método Alternativo)": {
+      "main": [
+        [
+          {
+            "node": "Extraer URL de Subtítulos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Hay Transcripción?": {
+      "main": [
+        [
+          {
+            "node": "Preparar para Análisis",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Obtener HTML (Método Alternativo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parsear Transcripción": {
+      "main": [
+        [
+          {
+            "node": "¿Hay Transcripción?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Transcripción (API YouTube)": {
+      "main": [
+        [
+          {
+            "node": "Parsear Transcripción",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer Metadata": {
+      "main": [
+        [
+          {
+            "node": "Obtener Transcripción (API YouTube)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Obtener Metadatos": {
+      "main": [
+        [
+          {
+            "node": "Extraer Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar URL": {
+      "main": [
+        [
+          {
+            "node": "Obtener Metadatos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error 401": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Autenticado?": {
+      "main": [
+        [
+          {
+            "node": "Validar URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar API Key": {
+      "main": [
+        [
+          {
+            "node": "¿Autenticado?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Receive": {
+      "main": [
+        [
+          {
+            "node": "Verificar API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "25035f5a60a3927bc5c7db20bc0e7b06a2ef24924b5b24b7260716e83c8dc808"
+  }
+}
