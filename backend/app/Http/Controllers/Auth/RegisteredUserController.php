@@ -18,7 +18,7 @@ class RegisteredUserController extends Controller
      *
      * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request): Response
+    public function store(Request $request): \Illuminate\Http\JsonResponse
     {
         $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -34,8 +34,15 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        Auth::login($user);
+        // No auto-login - user must login manually after registration
+        // This prevents cookie conflicts between registration and login
 
-        return response()->noContent();
+        return response()->json([
+            'message' => 'Registration successful. Please login.',
+            'user' => [
+                'name' => $user->name,
+                'email' => $user->email,
+            ]
+        ], 201);
     }
 }
