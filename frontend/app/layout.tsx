@@ -1,16 +1,17 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google"; 
+import { Outfit } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
-import { Navbar } from "@/components/layout/Nabar"; 
-
+import { Navbar } from "@/components/layout/Nabar";
+import { Footer } from "@/components/layout/Footer";
+import { Toaster } from "@/components/ui/sonner"; 
 import { ThemeProvider } from "@/components/theme-provider";
 
-const inter = Inter({ subsets: ["latin"] });
+const outfit = Outfit({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "SafeSolutions AI",
-  description: "Resumidor de videos con Inteligencia Artificial",
+  title: "VidSum - Resúmenes de Video con IA",
+  description: "Resúmenes de video con Inteligencia Artificial",
 };
 
 export default function RootLayout({
@@ -20,17 +21,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className={cn(inter.className, "bg-background text-foreground antialiased min-h-screen")}>
+      <body className={cn(outfit.className, "bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-50 antialiased")}>
         <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-          <Navbar /> 
-          <main className="pt-16"> 
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <Navbar />
+          <main>
             {children}
           </main>
+          <Footer />
+          <Toaster position="top-center" richColors /> 
         </ThemeProvider>
       </body>
     </html>

@@ -33,11 +33,11 @@ export function Navbar() {
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         {/* --- LOGO --- */}
         <Link href="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xl">S</span>
+          <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-cyan-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <span className="text-white font-bold text-xl">V</span>
           </div>
           <span className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
-            SafeSolutions
+            VidSum
           </span>
         </Link>
 
@@ -48,9 +48,9 @@ export function Navbar() {
             // Opción A: Visitante (No Logueado)
             <>
               <div className="flex gap-6 text-sm font-medium text-slate-600 dark:text-slate-400">
-                <Link href="#features" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Características</Link>
-                <Link href="#how-it-works" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Cómo funciona</Link>
-                <Link href="#pricing" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Precios</Link>
+                <Link href="/#features" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Características</Link>
+                <Link href="/#how-it-works" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Cómo funciona</Link>
+                <Link href="/#pricing" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Precios</Link>
               </div>
               <div className="flex gap-3 pl-6 border-l border-slate-200 dark:border-slate-800">
                 <Link href="/login">
@@ -152,9 +152,9 @@ export function Navbar() {
                 <div className="p-6 flex flex-col space-y-4">
                     {!user ? (
                         <>
-                            <Link href="#features" className="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 py-2" onClick={() => setIsMobileMenuOpen(false)}>Características</Link>
-                            <Link href="#how-it-works" className="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 py-2" onClick={() => setIsMobileMenuOpen(false)}>Cómo funciona</Link>
-                            <Link href="#pricing" className="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 py-2" onClick={() => setIsMobileMenuOpen(false)}>Precios</Link>
+                            <Link href="/#features" className="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 py-2" onClick={() => setIsMobileMenuOpen(false)}>Características</Link>
+                            <Link href="/#how-it-works" className="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 py-2" onClick={() => setIsMobileMenuOpen(false)}>Cómo funciona</Link>
+                            <Link href="/#pricing" className="text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 py-2" onClick={() => setIsMobileMenuOpen(false)}>Precios</Link>
                             <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-3">
                                 <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
                                     <Button variant="ghost" className="w-full justify-start text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900">
