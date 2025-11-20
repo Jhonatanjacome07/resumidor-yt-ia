@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import api from "@/lib/axios";
 
 export default function RegisterPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,20 +24,18 @@ export default function RegisterPage() {
       await api.get("/sanctum/csrf-cookie");
 
       // 2. Registrar usuario
-      await api.post("/api/register", {
+      const response = await api.post("/api/register", {
         name,
         email,
         password,
         password_confirmation,
       });
 
-      alert("¡Registro exitoso!");
-
-      // Limpiar formulario
-      setName("");
-      setEmail("");
-      setPassword("");
-      setPasswordConfirmation("");
+      // 3. Mostrar mensaje de éxito y redirigir al login
+      alert("¡Registro exitoso! Por favor inicia sesión.");
+      
+      // Redirigir al login
+      router.push("/login");
     } catch (error) {
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 422) {

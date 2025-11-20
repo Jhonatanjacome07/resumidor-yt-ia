@@ -19,6 +19,13 @@ export default function LoginPage() {
     setErrors({});
 
     try {
+      // 0. Limpiar cualquier sesión existente primero (por si hay cookies viejas)
+      try {
+        await api.post("/api/logout");
+      } catch {
+        // Ignorar errores de logout (puede que no haya sesión)
+      }
+
       // 1. Cookie CSRF
       await api.get("/sanctum/csrf-cookie");
 
