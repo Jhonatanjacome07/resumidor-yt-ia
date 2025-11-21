@@ -31,13 +31,23 @@ export default function LoginPage() {
     setGeneralError("");
 
     try {
+      // Primero, intentar hacer logout silencioso para limpiar cualquier cookie vieja
+      try {
+        await api.post("/api/logout");
+      } catch {
+        // Ignorar errores de logout, puede que no haya sesión activa
+      }
+
+      // Obtener nuevo CSRF token
       await api.get("/sanctum/csrf-cookie");
+      
+      // Intentar login
       await api.post("/api/login", { email, password });
       
       const userResponse = await api.get("/api/user");
       setUser(userResponse.data);
       
-      // 1. Notificación elegante en lugar de alert()
+      // Notificación elegante
       toast.success(`Bienvenido de nuevo, ${userResponse.data.name}`);
       
       router.push("/dashboard");
@@ -112,11 +122,9 @@ export default function LoginPage() {
                   placeholder="tu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  // Si hay error, pintamos el borde rojo
                   className={`bg-slate-100 dark:bg-slate-950/50 border-slate-300 dark:border-slate-700 focus:border-blue-500 ${fieldErrors.email ? "border-red-500 focus:border-red-500" : ""}`}
                   disabled={loading}
                 />
-                {/* Mensaje de error pequeño debajo del input */}
                 {fieldErrors.email && (
                   <p className="text-red-400 text-xs font-medium">{fieldErrors.email[0]}</p>
                 )}

@@ -16,13 +16,11 @@ export default function DashboardPage() {
   const router = useRouter();
   const logoutUser = useUserStore((state) => state.logout);
 
-  // Nuevo estado para la URL de YouTube, la carga y el resultado
   const [videoUrl, setVideoUrl] = useState('');
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null); 
   const [error, setError] = useState('');
 
-  // --- LÓGICA DE PROTECCIÓN DE RUTA Y LOGOUT ---
   useEffect(() => {
     if (!user) {
         router.push("/login");
@@ -35,13 +33,12 @@ export default function DashboardPage() {
       logoutUser(); 
       router.push('/login');
     } catch (error) {
-      console.error("Error al cerrar sesión:", error);
+      // Silenciar error para evitar exposición en consola
       logoutUser(); 
       router.push('/login');
     }
   };
 
-  // --- LÓGICA DE ANÁLISIS DE VIDEO ---
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoadingAnalysis(true);
@@ -49,28 +46,30 @@ export default function DashboardPage() {
     setAnalysisResult(null);
 
     try {
-        // Validación básica de URL antes de llamar al backend
         if (!videoUrl || !videoUrl.includes('youtube.com')) {
             setError('Por favor, ingresa una URL de YouTube válida.');
             setLoadingAnalysis(false);
             return;
         }
 
-        // 1. Obtener el CSRF cookie de Laravel Sanctum (IMPORTANTE para autenticación)
         await api.get('/sanctum/csrf-cookie');
-
-        // 2. Llamada al endpoint de Laravel (que a su vez llama a n8n)
         const response = await api.post('/api/analyze-video', {
             video_url: videoUrl, 
         });
 
-        // 3. Si es exitoso (código 200)
-        setAnalysisResult(response.data.analysis); // Guarda el JSON completo de n8n
+        setAnalysisResult(response.data.analysis);
         alert(response.data.message);
 
     } catch (err) {
         if (axios.isAxiosError(err) && err.response) {
-            // Maneja errores de validación de Laravel o errores devueltos por n8n
+            const status = err.response.status;
+            
+            if (status === 401) {
+                logoutUser();
+                router.push('/login');
+                return;
+            }
+            
             const message = err.response.data.message || 'Error desconocido en el análisis.';
             setError(message);
         } else {
@@ -81,41 +80,22 @@ export default function DashboardPage() {
     }
   };
 
-  // Función para limpiar el texto del análisis
-  const cleanAnalysisText = (text: string) => {
-    if (!text) return '';
-    
-    // Remover bloques de código markdown ```json...```
-    let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-    
-    // Intentar parsear si es JSON
-    try {
-      const parsed = JSON.parse(cleaned);
-      return parsed.summary || cleaned;
-    } catch {
-      return cleaned;
-    }
-  };
-
-  // Mostrar mensaje de carga mientras se verifica o redirige
-  if (!user) return <div className="text-white p-10">Verificando sesión...</div>;
+  if (!user) return <div className="text-slate-900 dark:text-white p-10">Verificando sesión...</div>;
 
  return (
-    <div className="min-h-screen bg-slate-950 text-slate-50 p-6 md:p-12">
+    <div className="min-h-screen bg-white dark:bg-slate-950 pt-24 pb-12 px-6 md:px-12">
       <div className="max-w-5xl mx-auto space-y-8">
         
-        {/* Header del Dashboard */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">Panel de Análisis</h1>
-            <p className="text-slate-400">Bienvenido de nuevo, {user.name}</p>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Panel de Análisis</h1>
+            <p className="text-slate-600 dark:text-slate-400">Bienvenido de nuevo, {user.name}</p>
           </div>
         </div>
 
-        {/* Sección de Entrada */}
-        <Card className="bg-slate-900/50 border-slate-800">
+        <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
+            <CardTitle className="flex items-center gap-2 text-xl text-slate-900 dark:text-white">
               <Search className="text-blue-400" size={20} />
               Nuevo Análisis
             </CardTitle>
@@ -129,7 +109,7 @@ export default function DashboardPage() {
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                   disabled={loadingAnalysis}
-                  className="bg-slate-950 border-slate-700 text-white pl-4 py-6 text-base"
+                  className="bg-slate-50 dark:bg-slate-950/50 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white pl-4 py-6 text-base"
                 />
               </div>
               <Button 
@@ -154,7 +134,6 @@ export default function DashboardPage() {
               </div>
             )}
 
-             {/* Aviso de tiempo */}
             {loadingAnalysis && (
                <p className="mt-4 text-sm text-yellow-500/80 animate-pulse">
                  Esto puede tomar hasta 90 segundos mientras la IA procesa el video...
@@ -163,37 +142,34 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Sección de Resultados */}
         {analysisResult && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             
-            {/* Resumen Principal */}
-            <Card className="bg-slate-900 border-slate-800 overflow-hidden">
+            <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 overflow-hidden">
               <div className="h-2 bg-gradient-to-r from-blue-500 to-cyan-500" />
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-slate-900 dark:text-white">
                   <FileText className="text-blue-400" /> Resumen Ejecutivo
                 </CardTitle>
               </CardHeader>
               <CardContent className="prose prose-invert max-w-none">
-                <div className="text-slate-300 leading-relaxed whitespace-pre-wrap text-lg">
+                <div className="text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap text-lg">
                   {analysisResult.summary}
                 </div>
               </CardContent>
             </Card>
 
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Puntos Clave */}
-              <Card className="bg-slate-900 border-slate-800">
+              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
+                  <CardTitle className="flex items-center gap-2 text-lg text-slate-900 dark:text-white">
                     <List className="text-teal-400" /> Puntos Clave
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ul className="space-y-3">
                     {analysisResult.keyPoints?.map((point: string, index: number) => (
-                      <li key={index} className="flex gap-3 text-slate-300">
+                      <li key={index} className="flex gap-3 text-slate-700 dark:text-slate-300">
                         <span className="text-teal-400 font-bold">•</span>
                         {point}
                       </li>
@@ -202,10 +178,9 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              {/* Metadatos / Palabras Clave */}
-              <Card className="bg-slate-900 border-slate-800">
+              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg">
+                  <CardTitle className="flex items-center gap-2 text-lg text-slate-900 dark:text-white">
                     <Tag className="text-purple-400" /> Palabras Clave y Tono
                   </CardTitle>
                 </CardHeader>
@@ -214,7 +189,7 @@ export default function DashboardPage() {
                     <h4 className="text-sm font-semibold text-slate-500 uppercase mb-3">Etiquetas</h4>
                     <div className="flex flex-wrap gap-2">
                       {analysisResult.keywords?.map((keyword: string, idx: number) => (
-                        <Badge key={idx} variant="secondary" className="bg-slate-800 text-slate-300 hover:bg-slate-700">
+                        <Badge key={idx} variant="secondary" className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
                           {keyword}
                         </Badge>
                       ))}
@@ -222,7 +197,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <h4 className="text-sm font-semibold text-slate-500 uppercase mb-2">Tono Detectado</h4>
-                    <p className="text-slate-300 italic">"{analysisResult.tone}"</p>
+                    <p className="text-slate-700 dark:text-slate-300 italic">"{analysisResult.tone}"</p>
                   </div>
                 </CardContent>
               </Card>
