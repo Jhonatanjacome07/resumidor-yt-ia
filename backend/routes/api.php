@@ -21,3 +21,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         ->middleware(['guest', 'throttle:6,1']);
 
 Route::middleware(['auth:sanctum'])->post('/analyze-video', [VideoAnalysisController::class, 'analyze']);
+
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::get('/summaries', [VideoAnalysisController::class, 'index']);
+    Route::delete('/summaries/{id}', [VideoAnalysisController::class, 'destroy']);
+});

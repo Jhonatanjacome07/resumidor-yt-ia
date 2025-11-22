@@ -12,6 +12,9 @@ const outfit = Outfit({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "VidSum - Resúmenes de Video con IA",
   description: "Resúmenes de video con Inteligencia Artificial",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({

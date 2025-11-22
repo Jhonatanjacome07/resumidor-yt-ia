@@ -128,4 +128,47 @@ class VideoAnalysisController extends Controller
             ], 503); // 503 Service Unavailable
         }
     }
+
+    /**
+     * Get user's analysis history
+     */
+    public function index(Request $request)
+    {
+        $summaries = Summary::where('user_id', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->select('id', 'video_title', 'summary', 'video_url', 'created_at')
+            ->get();
+
+        return response()->json([
+            'summaries' => $summaries
+        ], 200);
+    }
+
+    /**
+     * Delete a specific summary
+     */
+    public function destroy($id)
+    {
+        $summary = Summary::find($id);
+
+        // Check if summary exists
+        if (!$summary) {
+            return response()->json([
+                'message' => 'Análisis no encontrado.'
+            ], 404);
+        }
+
+        // Check if user owns this summary
+        if ($summary->user_id !== auth()->id()) {
+            return response()->json([
+                'message' => 'No tienes permiso para eliminar este análisis.'
+            ], 403);
+        }
+
+        $summary->delete();
+
+        return response()->json([
+            'message' => 'Análisis eliminado con éxito.'
+        ], 200);
+    }
 }

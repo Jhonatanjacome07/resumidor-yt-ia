@@ -2,21 +2,16 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
-import { Bot, Zap, Shield, PlayCircle, CheckCircle2, ArrowRight, Link as LinkIcon, FileText, Sparkles } from "lucide-react";
+import { Bot, ArrowRight, Link as LinkIcon, FileText, Sparkles } from "lucide-react";
 import { TechStackCarousel } from "@/components/TechStackCarousel";
+import { PricingCard } from "@/components/PricingCard";
 
 export default function LandingPage() {
   const fadeIn = {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
-  };
-
-  const staggerContainer = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1, transition: { staggerChildren: 0.2 } }
   };
 
   return (
@@ -109,53 +104,27 @@ export default function LandingPage() {
 
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             {/* Plan Gratis */}
-            <Card className="bg-slate-950 border-slate-800 relative overflow-hidden">
-              <CardHeader>
-                <CardTitle className="text-2xl text-white">Hobby</CardTitle>
-                <CardDescription>Para uso personal</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-white">$0</span>
-                  <span className="text-slate-500">/mes</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {["3 Análisis diarios", "Resúmenes básicos", "Historial de 7 días", "Soporte comunitario"].map(item => (
-                  <div key={item} className="flex items-center gap-3 text-slate-300">
-                    <CheckCircle2 size={18} className="text-blue-500" /> {item}
-                  </div>
-                ))}
-              </CardContent>
-              <CardFooter>
-                <Link href="/register" className="w-full">
-                  <Button variant="outline" className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white border-0">Registrarse Gratis</Button>
-                </Link>
-              </CardFooter>
-            </Card>
+            <PricingCard
+              title="Hobby"
+              description="Para uso personal"
+              price="$0"
+              features={["3 Análisis diarios", "Resúmenes básicos", "Historial de 7 días", "Soporte comunitario"]}
+              buttonText="Registrarse Gratis"
+              buttonLink="/register"
+              buttonVariant="outline"
+              mode="dark"
+            />
 
             {/* Plan Pro */}
-            <Card className="bg-slate-950 border-blue-500/50 relative overflow-hidden shadow-2xl shadow-blue-900/20">
-              <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">RECOMENDADO</div>
-              <CardHeader>
-                <CardTitle className="text-2xl text-white">Pro</CardTitle>
-                <CardDescription>Para creadores y estudiantes</CardDescription>
-                <div className="mt-4">
-                  <span className="text-4xl font-bold text-white">$9</span>
-                  <span className="text-slate-500">/mes</span>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {["Análisis ilimitados", "Análisis profundos con GPT-4", "Historial ilimitado", "Exportar a PDF/Notion", "Soporte prioritario"].map(item => (
-                  <div key={item} className="flex items-center gap-3 text-slate-300">
-                    <CheckCircle2 size={18} className="text-blue-400" /> {item}
-                  </div>
-                ))}
-              </CardContent>
-              <CardFooter>
-                <Button className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white border-0">
-                  Mejorar a Pro
-                </Button>
-              </CardFooter>
-            </Card>
+            <PricingCard
+              title="Pro"
+              description="Para creadores y estudiantes"
+              price="$9"
+              features={["Análisis ilimitados", "Análisis profundos con GPT-4", "Historial ilimitado", "Exportar a PDF/Notion", "Soporte prioritario"]}
+              isRecommended={true}
+              buttonText="Próximamente"
+              mode="dark"
+            />
           </div>
         </div>
       </section>

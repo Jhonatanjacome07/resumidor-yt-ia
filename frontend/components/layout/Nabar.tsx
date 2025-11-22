@@ -48,7 +48,7 @@ export function Navbar() {
             // Opción A: Visitante (No Logueado)
             <>
               <div className="flex gap-6 text-sm font-medium text-slate-600 dark:text-slate-400">
-                <Link href="/#features" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Características</Link>
+                <Link href="/#features" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Inicio</Link>
                 <Link href="/#how-it-works" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Cómo funciona</Link>
                 <Link href="/#pricing" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Precios</Link>
               </div>

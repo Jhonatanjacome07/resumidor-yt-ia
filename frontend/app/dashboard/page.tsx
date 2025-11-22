@@ -10,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input"; 
 import { Badge } from "@/components/ui/badge"; 
 import { Loader2, Search, FileText, List, Tag } from "lucide-react";
+import { PremiumFeatureCard } from "@/components/PremiumFeatureCard";
+import { PricingModal } from "@/components/PricingModal";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
   const user = useUserStore((state) => state.user);
@@ -20,6 +23,9 @@ export default function DashboardPage() {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null); 
   const [error, setError] = useState('');
+  
+  // Pricing modal state
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -58,7 +64,7 @@ export default function DashboardPage() {
         });
 
         setAnalysisResult(response.data.analysis);
-        alert(response.data.message);
+        toast.success(response.data.message);
 
     } catch (err) {
         if (axios.isAxiosError(err) && err.response) {
@@ -160,31 +166,29 @@ export default function DashboardPage() {
             </Card>
 
             <div className="grid md:grid-cols-2 gap-6">
-              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg text-slate-900 dark:text-white">
-                    <List className="text-teal-400" /> Puntos Clave
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-3">
-                    {analysisResult.keyPoints?.map((point: string, index: number) => (
-                      <li key={index} className="flex gap-3 text-slate-700 dark:text-slate-300">
-                        <span className="text-teal-400 font-bold">•</span>
-                        {point}
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+              {/* Premium Feature: Puntos Clave */}
+              <PremiumFeatureCard
+                title="Puntos Clave"
+                icon={<List className="text-teal-400" />}
+                onUpgradeClick={() => setShowPricingModal(true)}
+              >
+                <ul className="space-y-3">
+                  {analysisResult.keyPoints?.map((point: string, index: number) => (
+                    <li key={index} className="flex gap-3 text-slate-700 dark:text-slate-300">
+                      <span className="text-teal-400 font-bold">•</span>
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+              </PremiumFeatureCard>
 
-              <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-lg text-slate-900 dark:text-white">
-                    <Tag className="text-purple-400" /> Palabras Clave y Tono
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
+              {/* Premium Feature: Palabras Clave y Tono */}
+              <PremiumFeatureCard
+                title="Palabras Clave y Tono"
+                icon={<Tag className="text-purple-400" />}
+                onUpgradeClick={() => setShowPricingModal(true)}
+              >
+                <div className="space-y-6">
                   <div>
                     <h4 className="text-sm font-semibold text-slate-500 uppercase mb-3">Etiquetas</h4>
                     <div className="flex flex-wrap gap-2">
@@ -199,12 +203,18 @@ export default function DashboardPage() {
                     <h4 className="text-sm font-semibold text-slate-500 uppercase mb-2">Tono Detectado</h4>
                     <p className="text-slate-700 dark:text-slate-300 italic">"{analysisResult.tone}"</p>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </PremiumFeatureCard>
             </div>
           </div>
         )}
       </div>
+
+      {/* Pricing Modal */}
+      <PricingModal 
+        open={showPricingModal}
+        onOpenChange={setShowPricingModal}
+      />
     </div>
   );
 }
