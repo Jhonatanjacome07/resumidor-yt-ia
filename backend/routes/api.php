@@ -20,7 +20,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/login', [AuthenticatedSessionController::class, 'store'])
         ->middleware(['guest', 'throttle:6,1']);
 
-Route::middleware(['auth:sanctum'])->post('/analyze-video', [VideoAnalysisController::class, 'analyze']);
+// Video analysis routes (require auth and email verification)
+Route::middleware(['auth:sanctum', 'verified'])->post('/analyze-video', [VideoAnalysisController::class, 'analyze']);
 
 Route::middleware(['auth:sanctum'])->group(function () {
     Route::get('/summaries', [VideoAnalysisController::class, 'index']);

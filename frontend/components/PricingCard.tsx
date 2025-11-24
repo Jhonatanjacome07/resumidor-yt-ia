@@ -77,7 +77,7 @@ export function PricingCard({
               className={cn(
                 "w-full",
                 isRecommended && "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white border-0",
-                isDark && !isRecommended && "border-slate-700 text-white hover:bg-slate-800"
+                isDark && !isRecommended && ""
               )}
             >
               {buttonText}
@@ -90,7 +90,7 @@ export function PricingCard({
             className={cn(
               "w-full",
               isRecommended && "bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white border-0",
-              isDark && !isRecommended && "border-slate-700 text-white hover:bg-slate-800"
+              isDark && !isRecommended && "bg-transparent border-slate-700 text-white hover:bg-slate-800"
             )}
           >
             {buttonText}

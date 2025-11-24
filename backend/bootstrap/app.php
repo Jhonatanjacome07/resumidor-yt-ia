@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         
         $middleware->statefulApi();
+        
+        // Redirect unauthenticated users to frontend login
+        $middleware->redirectGuestsTo(fn () => config('app.frontend_url') . '/login');
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

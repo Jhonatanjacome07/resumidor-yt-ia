@@ -119,10 +119,11 @@ export default function LandingPage() {
             <PricingCard
               title="Pro"
               description="Para creadores y estudiantes"
-              price="$9"
+              price="$9.99"
               features={["Análisis ilimitados", "Análisis profundos con GPT-4", "Historial ilimitado", "Exportar a PDF/Notion", "Soporte prioritario"]}
               isRecommended={true}
-              buttonText="Próximamente"
+              buttonText="Adquiérelo ya"
+              buttonLink="https://safesolutions.lemonsqueezy.com/buy/934dcb77-2f21-4356-bb5b-6c0b8d235a95"
               mode="dark"
             />
           </div>

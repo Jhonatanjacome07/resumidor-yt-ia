@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge"; 
 import { Loader2, Search, FileText, List, Tag } from "lucide-react";
 import { PremiumFeatureCard } from "@/components/PremiumFeatureCard";
-import { PricingModal } from "@/components/PricingModal";
+import PricingModal from "@/components/PricingModal";
 import { toast } from "sonner";
 
 export default function DashboardPage() {
@@ -26,12 +26,30 @@ export default function DashboardPage() {
   
   // Pricing modal state
   const [showPricingModal, setShowPricingModal] = useState(false);
+  
+  // Usage tracking
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [currentUsage, setCurrentUsage] = useState(0);
 
   useEffect(() => {
     if (!user) {
         router.push("/login");
+    } else {
+        fetchUserInfo();
     }
   }, [user, router]);
+  
+  const fetchUserInfo = async () => {
+    try {
+      const response = await api.get('/api/summaries');
+      if (response.data.user_info) {
+        setUserInfo(response.data.user_info);
+        setCurrentUsage(response.data.user_info.monthly_usage_count || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching user info:', error);
+    }
+  };
   
   const handleLogout = async () => {
     try {
@@ -39,7 +57,6 @@ export default function DashboardPage() {
       logoutUser(); 
       router.push('/login');
     } catch (error) {
-      // Silenciar error para evitar exposición en consola
       logoutUser(); 
       router.push('/login');
     }
@@ -53,7 +70,9 @@ export default function DashboardPage() {
 
     try {
         if (!videoUrl || !videoUrl.includes('youtube.com')) {
-            setError('Por favor, ingresa una URL de YouTube válida.');
+            const msg = 'Por favor, ingresa una URL de YouTube válida.';
+            setError(msg);
+            toast.error(msg);
             setLoadingAnalysis(false);
             return;
         }
@@ -65,10 +84,14 @@ export default function DashboardPage() {
 
         setAnalysisResult(response.data.analysis);
         toast.success(response.data.message);
+        
+        // Refresh user info to update usage count
+        await fetchUserInfo();
 
     } catch (err) {
         if (axios.isAxiosError(err) && err.response) {
             const status = err.response.status;
+            const errorCode = err.response.data.error;
             
             if (status === 401) {
                 logoutUser();
@@ -76,10 +99,28 @@ export default function DashboardPage() {
                 return;
             }
             
+            // Handle email verification error
+            if (errorCode === 'EMAIL_NOT_VERIFIED') {
+                const msg = 'Por favor verifica tu correo electrónico antes de usar este servicio.';
+                setError(msg);
+                toast.error('Verifica tu correo electrónico');
+                return;
+            }
+            
+            // Handle usage limit error
+            if (errorCode === 'USAGE_LIMIT_REACHED') {
+                setError(err.response.data.message);
+                setShowPricingModal(true);
+                return;
+            }
+            
             const message = err.response.data.message || 'Error desconocido en el análisis.';
             setError(message);
+            toast.error(message);
         } else {
-            setError('Error de red. Asegúrate de que los servidores estén activos.');
+            const netError = 'Error de red. Asegúrate de que los servidores estén activos.';
+            setError(netError);
+            toast.error(netError);
         }
     } finally {
         setLoadingAnalysis(false);
@@ -97,6 +138,20 @@ export default function DashboardPage() {
             <h1 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Panel de Análisis</h1>
             <p className="text-slate-600 dark:text-slate-400">Bienvenido de nuevo, {user.name}</p>
           </div>
+          
+          {/* Usage Info */}
+          {userInfo && (
+            <div className="flex items-center gap-4">
+              <Badge variant={userInfo.subscription_status === 'premium' ? 'default' : 'secondary'}>
+                {userInfo.subscription_status === 'premium' ? 'Premium' : 'Gratis'}
+              </Badge>
+              {userInfo.subscription_status !== 'premium' && (
+                <div className="text-sm text-slate-600 dark:text-slate-400">
+                  Análisis: <span className="font-semibold">{currentUsage}/3</span> este mes
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <Card className="bg-white dark:bg-slate-900/50 border-slate-200 dark:border-slate-800">
@@ -214,6 +269,7 @@ export default function DashboardPage() {
       <PricingModal 
         open={showPricingModal}
         onOpenChange={setShowPricingModal}
+        currentUsage={currentUsage}
       />
     </div>
   );

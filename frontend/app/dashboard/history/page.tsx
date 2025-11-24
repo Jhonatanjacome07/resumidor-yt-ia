@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import api from "@/lib/axios"; 
 import { AnalysisHistoryTable } from "@/components/AnalysisHistoryTable";
 import { toast } from "sonner";
+import PricingModal from "@/components/PricingModal";
 
 interface Summary {
   id: number;
@@ -22,6 +23,8 @@ export default function HistoryPage() {
   const [summaries, setSummaries] = useState<Summary[]>([]);
   const [loadingSummaries, setLoadingSummaries] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [showPricingModal, setShowPricingModal] = useState(false);
+  const [currentUsage, setCurrentUsage] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -35,6 +38,9 @@ export default function HistoryPage() {
     try {
       const response = await api.get('/api/summaries');
       setSummaries(response.data.summaries);
+      if (response.data.user_info) {
+        setCurrentUsage(response.data.user_info.monthly_usage_count || 0);
+      }
     } catch (error) {
       console.error('Error fetching summaries:', error);
       toast.error('Error al cargar el historial');
@@ -80,9 +86,16 @@ export default function HistoryPage() {
             summaries={summaries}
             onDelete={handleDeleteSummary}
             isDeleting={deletingId}
+            onUpgrade={() => setShowPricingModal(true)}
           />
         )}
       </div>
+
+      <PricingModal 
+        open={showPricingModal}
+        onOpenChange={setShowPricingModal}
+        currentUsage={currentUsage}
+      />
     </div>
   );
 }

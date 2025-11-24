@@ -19,9 +19,10 @@ interface AnalysisHistoryTableProps {
   summaries: Summary[];
   onDelete: (id: number) => void;
   isDeleting: number | null;
+  onUpgrade: () => void;
 }
 
-export function AnalysisHistoryTable({ summaries, onDelete, isDeleting }: AnalysisHistoryTableProps) {
+export function AnalysisHistoryTable({ summaries, onDelete, isDeleting, onUpgrade }: AnalysisHistoryTableProps) {
 
 
   return (
@@ -120,7 +121,10 @@ export function AnalysisHistoryTable({ summaries, onDelete, isDeleting }: Analys
                 <p className="text-slate-600 dark:text-slate-300 font-medium mb-3">
                   Ver historial completo
                 </p>
-                <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white border-0 shadow-lg shadow-blue-500/20">
+                <Button 
+                  onClick={onUpgrade}
+                  className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white border-0 shadow-lg shadow-blue-500/20"
+                >
                   Actualizar Plan
                 </Button>
               </div>

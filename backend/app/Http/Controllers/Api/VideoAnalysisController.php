@@ -14,7 +14,42 @@ class VideoAnalysisController extends Controller
 {
     public function analyze(Request $request)
     {
-        //1. Validación de Requerimientos 
+        $user = auth()->user();
+
+        // 1. Check if email is verified
+        if (!$user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Por favor verifica tu correo electrónico antes de usar este servicio.',
+                'error' => 'EMAIL_NOT_VERIFIED'
+            ], 403);
+        }
+
+        // 2. Check usage limits (only for free users)
+        if ($user->subscription_status !== 'premium') {
+            // Check if we need to reset monthly usage
+            $now = now();
+            $lastReset = $user->last_usage_reset_date ? \Carbon\Carbon::parse($user->last_usage_reset_date) : null;
+            
+            // Reset if it's a new month or first time
+            if (!$lastReset || $lastReset->month !== $now->month || $lastReset->year !== $now->year) {
+                $user->update([
+                    'monthly_usage_count' => 0,
+                    'last_usage_reset_date' => $now,
+                ]);
+            }
+
+            // Check if user has exceeded free limit
+            if ($user->monthly_usage_count >= 3) {
+                return response()->json([
+                    'message' => 'Has alcanzado el límite de 3 análisis gratuitos este mes.',
+                    'error' => 'USAGE_LIMIT_REACHED',
+                    'usage_count' => $user->monthly_usage_count,
+                    'limit' => 3,
+                ], 403);
+            }
+        }
+
+        //3. Validación de Requerimientos 
         $request->validate([
             'video_url' => [
                 'required', 
@@ -23,7 +58,32 @@ class VideoAnalysisController extends Controller
                 'url', Rule::prohibitedIf(!preg_match('/(youtube\.com\/watch\?v=|youtu\.be\/)/', $request->video_url))
               ] 
         ]);
-        //2. Preparación de la llamada a n8n
+
+        // Extract video ID from URL to check for duplicates
+        $videoId = null;
+        if (preg_match('/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/', $request->video_url, $matches)) {
+            $videoId = $matches[1];
+        }
+
+        // Check if user already analyzed this video
+        if ($videoId) {
+            $existingSummary = Summary::where('user_id', $user->id)
+                ->where('video_id', $videoId)
+                ->first();
+
+            if ($existingSummary) {
+                return response()->json([
+                    'message' => 'Ya has analizado este video anteriormente. Aquí tienes el resultado.',
+                    'analysis_id' => $existingSummary->id,
+                    'video_title' => $existingSummary->video_title,
+                    'analysis' => $existingSummary->analysis_data,
+                    'remaining_free_uses' => $user->subscription_status === 'premium' ? 'unlimited' : (3 - $user->monthly_usage_count),
+                    'from_cache' => true
+                ], 200);
+            }
+        }
+
+        //4. Preparación de la llamada a n8n
         $webhookUrl = env('N8N_WEBHOOK_URL');
         $apiKey = env('N8N_API_KEY'); 
         
@@ -35,7 +95,7 @@ class VideoAnalysisController extends Controller
             'requestId' => \Illuminate\Support\Str::uuid(), 
         ];
 
-        // 3. Llamada al Webhook (Motor de n8n)
+        // 5. Llamada al Webhook (Motor de n8n)
         try {
             $response = Http::withHeaders([
                 // Pasamos la clave de seguridad que configuraste en n8n
@@ -44,7 +104,7 @@ class VideoAnalysisController extends Controller
             ->timeout(90) // Esperamos hasta 90 segundos por el análisis de Gemini
             ->post($webhookUrl, $payload);
 
-            // 4. Manejo de la Respuesta de n8n
+            // 6. Manejo de la Respuesta de n8n
             $responseData = $response->json();
 
             // Log para debugging (puedes comentar esto en producción)
@@ -88,7 +148,12 @@ class VideoAnalysisController extends Controller
                 $transcriptInfo = $responseData['transcript'] ?? [];
                 
                 // Usamos una transacción para asegurar que el guardado sea atómico
-                $savedSummary = DB::transaction(function () use ($responseData, $analysis, $videoInfo, $transcriptInfo) {
+                $savedSummary = DB::transaction(function () use ($responseData, $analysis, $videoInfo, $transcriptInfo, $user) {
+                    // Increment usage count for free users
+                    if ($user->subscription_status !== 'premium') {
+                        $user->increment('monthly_usage_count');
+                    }
+
                     return Summary::create([
                         'user_id' => $responseData['userId'],
                         'request_id' => $responseData['requestId'] ?? null,
@@ -107,7 +172,8 @@ class VideoAnalysisController extends Controller
                     'message' => 'Análisis completado y guardado con éxito.',
                     'analysis_id' => $savedSummary->id,
                     'video_title' => $videoInfo['title'],
-                    'analysis' => $analysis
+                    'analysis' => $analysis,
+                    'remaining_free_uses' => $user->subscription_status === 'premium' ? 'unlimited' : (3 - $user->fresh()->monthly_usage_count),
                 ], 200);
 
             } else {
@@ -134,13 +200,20 @@ class VideoAnalysisController extends Controller
      */
     public function index(Request $request)
     {
-        $summaries = Summary::where('user_id', auth()->id())
+        $user = auth()->user();
+        
+        $summaries = Summary::where('user_id', $user->id)
             ->orderBy('created_at', 'desc')
             ->select('id', 'video_title', 'summary', 'video_url', 'created_at')
             ->get();
 
         return response()->json([
-            'summaries' => $summaries
+            'summaries' => $summaries,
+            'user_info' => [
+                'subscription_status' => $user->subscription_status,
+                'monthly_usage_count' => $user->monthly_usage_count,
+                'remaining_free_uses' => $user->subscription_status === 'premium' ? 'unlimited' : (3 - $user->monthly_usage_count),
+            ]
         ], 200);
     }
 
